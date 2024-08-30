@@ -1,5 +1,5 @@
 # FlyGo
-
+![Alt text](logo.png)
 ## How to Use
 The **gene_main.py** file is the main file to run. It is almost entirely set up! You'll just need to 
 edit the lines indicated with your directories. In the example code, there are 2 directories- one

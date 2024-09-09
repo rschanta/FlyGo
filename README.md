@@ -14,8 +14,7 @@ The `gene_module.py` script is structured as a module, so all the functions can 
 are imported 
 
 ## How it works
-Moreorless, this loads in the flybase data, then the obo data, matches them up, and does Timothy's preprocessing to link
-them all together
+Moreorless, this loads in the flybase data, then the obo data, matches them up, and uses the Shirasu-Hiza Lab preprocessing to link them all together.
 
 ## Contact
 rschanta@udel.edu

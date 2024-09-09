@@ -30,8 +30,9 @@ def prep_gene_association_file(file_path):
     # Only keep the biological Processes (P)
     filtered_data = data[data['type'] == 'P']
     
-    # Filter out nots
-    filtered_data = filtered_data[~filtered_data['keyword'].str.contains('NOT', case=False, na=False)]
+    # EDIT 9_9_2024: Exclude all FB_ID entries where at least one has a NOT
+    not_fb_ids = filtered_data[filtered_data['keyword'].str.contains('NOT')]['FB_ID']
+    filtered_data = filtered_data[~filtered_data['FB_ID'].isin(not_fb_ids)]
 
     ## Reformat alternate name column for convenienve
     # Ensure string
@@ -147,7 +148,7 @@ def lambda_fun(name,fb_data,obo_data):
         - name (string): gene name
 
     OUTPUTS
-        - OBO_names (string): all of the names from the OBO file, concatenated as a string
+        - biological_process (string): all of the names from the OBO file, concatenated as a string
             separated by |
         - FB_IDs (string): all of the FB_IDs, concatenated as a string
             separated by | . There really should only be one, but some have multiple.
@@ -163,10 +164,10 @@ def lambda_fun(name,fb_data,obo_data):
     try:
         parsed_data = get_name_info(fb_data,obo_data,name)
         # Get long strings, name, and FB_IDS
-        OBO_names = parsed_data['name_obo'].str.cat(sep='|')
+        biological_process = parsed_data['name_obo'].str.cat(sep='|')
         FB_IDs = '|'.join(parsed_data['FB_ID'].unique())
         GO_IDs = parsed_data['GO_ID'].str.cat(sep='|')
-        return OBO_names, FB_IDs,GO_IDs
+        return biological_process, FB_IDs,GO_IDs
     except:
         print(f'Problem with {name}! Data from FlyBase not found.')
         return None,None,None
@@ -194,16 +195,16 @@ def process_file(filepath,fb_data,obo_data,save=True):
     # Load in the csv, rename first column to gene
     file1 = pd.read_csv(filepath)
     file1 = file1.rename(columns={file1.columns[0]: 'gene'})
-    
     # Remove NaNs
     file1 = file1.dropna(subset=['padj'])
     # Filter for significant p-value
     file1 = file1[file1['padj'] < 0.05]
     
-    # Identify down-regulated entries
-    down_regulated = file1[file1['log2FoldChange'] < -1]
+    # EDIT 9_9_24: sign swap up and down
+    #Identify down-regulated entries
+    down_regulated = file1[file1['log2FoldChange'] > 1]
     # Identify up-regulated entries
-    up_regulated = file1[file1['log2FoldChange'] > 1]
+    up_regulated = file1[file1['log2FoldChange'] < -1]
     # Identified combined entries
     both_regulated = file1[(file1['log2FoldChange'] < -1) | (file1['log2FoldChange'] > 1)]
     
@@ -213,9 +214,15 @@ def process_file(filepath,fb_data,obo_data,save=True):
     both_regulated = both_regulated.copy()
     
     # Apply mapping functions for the annotations
-    down_regulated[['OBO_names', 'FB_IDs', 'GO_IDs']] = down_regulated['gene'].apply(lambda x: pd.Series(lambda_fun(x, fb_data,obo_data)))
-    up_regulated[['OBO_names', 'FB_IDs', 'GO_IDs']] = up_regulated['gene'].apply(lambda x: pd.Series(lambda_fun(x, fb_data,obo_data)))
-    both_regulated[['OBO_names', 'FB_IDs', 'GO_IDs']] = both_regulated['gene'].apply(lambda x: pd.Series(lambda_fun(x, fb_data,obo_data)))
+    down_regulated[['biological_process', 'FB_IDs', 'GO_IDs']] = down_regulated['gene'].apply(lambda x: pd.Series(lambda_fun(x, fb_data,obo_data)))
+    up_regulated[['biological_process', 'FB_IDs', 'GO_IDs']] = up_regulated['gene'].apply(lambda x: pd.Series(lambda_fun(x, fb_data,obo_data)))
+    both_regulated[['biological_process', 'FB_IDs', 'GO_IDs']] = both_regulated['gene'].apply(lambda x: pd.Series(lambda_fun(x, fb_data,obo_data)))
+    
+    # Reorder
+    column_order =['gene','FB_IDs','biological_process','baseMean','log2FoldChange','lfcSE','stat','pvalue','padj','GO_IDs']
+    down_regulated = down_regulated[column_order]
+    up_regulated = up_regulated[column_order]
+    both_regulated = both_regulated[column_order]
     
     ## If save is true, save 
     if save == True:

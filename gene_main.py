@@ -1,6 +1,9 @@
 from gene_module import prep_gene_association_file, parse_obo_file,process_file
 import glob
 import os 
+import sys
+
+
 #%% Paths to the gene association and obo files
 gene_association_path = 'gene_association.csv'
 obo_path = 'go-basic.obo'
@@ -26,3 +29,5 @@ files = hyperoxia_files + mutant_files
 # Loop through both
 for file in files:
     process_file(file,fb_data,obo_data,)
+
+print('Successfully finished GO Processing...')

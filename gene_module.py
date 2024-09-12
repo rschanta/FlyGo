@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 import os
 import warnings
+import re
 # Suppress specific warnings- The escape sequence is fine, and I'm using regular expressions :)
 warnings.filterwarnings("ignore", category=SyntaxWarning, message="invalid escape sequence")
 warnings.filterwarnings("ignore", category=UserWarning, message="This pattern is interpreted as a regular expression")
@@ -130,6 +131,8 @@ def get_name_info(fb_data,obo_data,name):
             file with the description of what things actuall are/do.
 
     '''
+    ## EDIT 9_11_2024: Deal with case of parentheses in strings by escaping
+    name = re.escape(name)
     # Find info for name in flybase data
     name_data = get_info_name(fb_data,name)
     # Merge with info in the obo file
